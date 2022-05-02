@@ -26,6 +26,12 @@ Install Python 3.x (Preferably 3.10.4 - Tested using this version).
 
 **flask run**
 
+***Note***: The Server uses gNMI certificate based authentication for communication with switch. Switch needs to have certificate configured and set up with below details.
+
+**host name on cert** - localhost
+
+It uses the same certificate which spytest uses. In order to setup certificate on switch automatically execute any spytest gNMI testcase, this will setup the certificate on switch.
+
 ### Client prerequisite
 
 Install NodeJs (Preferably v17.9.0 - Tested using this version)
