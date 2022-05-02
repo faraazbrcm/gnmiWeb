@@ -48,12 +48,14 @@ import {
 } from "react-timeseries-charts";
 import { TimeSeries, Index } from "pondjs";
 import Snackbar from '@mui/material/Snackbar';
+import { fontSize } from '@mui/system';
 
 const style = styler([
   {
     key: "precip",
     color: "#260105",
-    selected: "#2CB1CF"
+    selected: "#2CB1CF",
+    fontSize: 30
   }
 ]);
 
@@ -85,7 +87,7 @@ function App() {
   const [snackMsg, setSnackMsg] = useState("");
   const [vlans, setVlans] = useState([])
   const [vlanId, setVlanId] = useState(10)
-  const [vlanStr, setVlanStr] = useState("Vlan10")
+  const [vlanStr, setVlanStr] = useState(10)
   const [phyPort, setPhyPort] = useState("Ethernet11")
   const [mtu, setMtu] = useState(1312)
 
@@ -245,6 +247,7 @@ function App() {
       setLoading(false);
       setSnackMsg("Login Successful")
       setshowSnack(true);
+      get_vlans();
     })
     .catch(function (error) {
       console.log(error);
@@ -276,7 +279,7 @@ function App() {
   }
 
   const create_vlan = () => {
-    axios.post("/create_vlan/"+sid+"/"+vlanStr)
+    axios.post("/create_vlan/"+sid+"/"+"Vlan"+vlanStr)
     .then(function (response) {
       console.log(response);
       setSnackMsg("VLAN "+vlanStr+" Created!");
@@ -304,7 +307,7 @@ function App() {
   }
 
   const vlan_mtu = () => {
-    axios.post("/vlan_mtu/"+sid+"/"+vlanStr+"/"+mtu)
+    axios.post("/vlan_mtu/"+sid+"/"+"Vlan"+vlanStr+"/"+mtu)
     .then(function (response) {
       console.log(response);
       setSnackMsg("Assigned VLAN "+vlanStr+" a MTU! "+mtu);
@@ -466,13 +469,14 @@ function App() {
         message={snackMsg}
       />
     <Box sx={{ display: 'flex' }}>
-        <AppBar position="static">
-          <Toolbar>
-            <Typography variant="h3" component="div" sx={{ flexGrow: 1 }}>
+        <AppBar position="static" color="error">
+          <Toolbar color="error">
+            <Typography variant="h3" color="dark" component="div" sx={{ flexGrow: 1 }}>
                 BROADCOM
             </Typography>
             { gConnect ? (
-            <Button startIcon={<LogoutIcon />} size="large" variant="contained" color="error" onClick={gnmi_disconnect} sx={{ flexGrow: 0.1 }}>Disconnect</Button>
+            <Button size="large" variant="primary"  onClick={gnmi_disconnect} sx={{ flexGrow: 0.1 }}>
+              <Typography variant="h6" component="button" sx={{ flexGrow: 1 }}>Disconnect</Typography></Button>
             ): (<div></div>)
             }
           </Toolbar>
@@ -487,7 +491,7 @@ function App() {
             <Container>
               <Box sx={{ borderBottom: 1, borderColor: 'divider',
             flexgrow:1 }}>
-                <Tabs value={value} onChange={handleChange} aria-label="basic tabs example">
+                <Tabs indicatorColor="secondary" textColor="secondary" value={value} onChange={handleChange} aria-label="basic tabs example">
                   <Tab label="GET/SET" {...a11yProps(0)} />
                   <Tab label="Subscribe Onchange" {...a11yProps(1)} />
                   <Tab label="Subscribe Sample" {...a11yProps(2)} />
@@ -499,53 +503,85 @@ function App() {
                 value == 0 ? (<Box sx={{ width: '100%', paddingTop: 2 }}>
                   <Grid container>
                     <Grid item xs={6}>
-                      <Card sx={{ paddingTop: 2  }}>
-                      <CardActions sx={{ paddingTop: 5  }}>
-                        <Typography sx={{ flexGrow: 1}} color="text.secondary" gutterBottom>
-                          VLAN Configurations
-                        </Typography>
-                        </CardActions>
-                        <CardActions sx={{ paddingTop: 5  }}>
-                          <TextField id="outlined-basic" label="Vlan ID" value={vlanId} onChange={popVlanId} variant="outlined"/>
-                          <TextField id="outlined-basic" label="Vlan Name" value={vlanStr} onChange={popVlanStr} variant="outlined"/>
-                          <TextField id="outlined-basic" label="Port" value={phyPort} onChange={popPhyPort} variant="outlined"/>
-                          <TextField id="outlined-basic" label="MTU" value={mtu} onChange={popMtu} variant="outlined"/>
-                        </CardActions>
-                        <CardContent>
-                        <ButtonGroup variant="outlined" aria-label="outlined primary button group">
-                          <Button   variant="outlined" onClick={create_vlan}>Create</Button>
-                          <Button   variant="outlined" onClick={vlan_membership}>Assign Member</Button>
-                          {/* <Button  variant="outlined" onClick={start_interface_rpc}>Enable AutoState</Button> */}
-                          <Button  variant="outlined" onClick={vlan_mtu}>Assign MTU</Button>
-                        </ButtonGroup>
-                        </CardContent>
-                      </Card>
+                      <Grid container>
+                        <Grid item sx={{width: '100%'}}>
+                          <Card sx={{ paddingTop: 2, width: '100%'  }}>
+                            <CardActions sx={{ paddingTop: 5  }}>
+                              <Typography sx={{ flexGrow: 1}} color="text.secondary" gutterBottom>
+                                VLAN Create
+                              </Typography>
+                            </CardActions>
+                            <CardActions sx={{ paddingTop: 5  }}>
+                              <TextField color="error" id="outlined-basic" label="Vlan Name" value={vlanStr} onChange={popVlanStr} variant="outlined"/>
+                            </CardActions>
+                            <CardContent>
+                              <Button color="error" variant="contained" onClick={create_vlan}>Create</Button>
+                            </CardContent>
+                          </Card>
+                        </Grid>
+                        <Grid item sx={{ paddingTop: 2, width: '100%' }}>
+                          <Card>
+                            <CardActions sx={{ paddingTop: 5  }}>
+                              <Typography sx={{ flexGrow: 1}} color="text.secondary" gutterBottom>
+                                MTU
+                              </Typography>
+                            </CardActions>
+                            <CardActions sx={{ paddingTop: 5  }}>
+                              <TextField color="error" id="outlined-basic" label="Vlan ID" value={vlanId} onChange={popVlanId} variant="outlined"/>
+                              <TextField color="error" id="outlined-basic" label="MTU" value={mtu} onChange={popMtu} variant="outlined"/>
+                            </CardActions>
+                            <CardContent>
+                              <Button  color="error" variant="contained" onClick={vlan_mtu}>Assign MTU</Button>
+                            </CardContent>
+                          </Card>
+                        </Grid>
+                        <Grid item sx={{ paddingTop: 2, width: '100%'  }}>
+                          <Card sx={{ paddingTop: 2  }}>
+                            <CardActions sx={{ paddingTop: 5  }}>
+                              <Typography sx={{ flexGrow: 1}} color="text.secondary" gutterBottom>
+                                VLAN Membership
+                              </Typography>
+                            </CardActions>
+                            <CardActions sx={{ paddingTop: 5  }}>
+                              <TextField color="error" id="outlined-basic" label="Vlan ID" value={vlanId} onChange={popVlanId} variant="outlined"/>
+                              <TextField color="error" id="outlined-basic" label="Port" value={phyPort} onChange={popPhyPort} variant="outlined"/>
+                            </CardActions>
+                            <CardContent>
+                              <Button  color="error" variant="contained" onClick={vlan_membership}>Assign Member</Button>
+                            </CardContent>
+                          </Card>
+                        </Grid>
+                      </Grid>
                     </Grid>
                     <Grid item xs={6} sx={{paddingLeft: 2}}>
                       <Card >
                           <Item>
                             <CardActions>
-                              <Typography sx={{ flexGrow: 1}} color="text.secondary" gutterBottom>
+                              <Typography variant="h5" sx={{ flexGrow: 1}} color="text.secondary" gutterBottom>
                                 Show VLANs
                               </Typography>
-                              <Button variant="outlined" onClick={get_vlans}>Show</Button>
+                              <Button color="error" variant="contained" onClick={get_vlans}>Show</Button>
                             </CardActions>
                             <CardContent>
+                            <Paper sx={{ width: '100%', overflow: 'hidden' }}>
                               <TableContainer component={Paper}>
-                                  <Table  aria-label="simple table">
+                                  <Table  stickyHeader aria-label="simple table">
                                     <TableHead>
                                       <TableRow>
                                         <TableCell>
-                                          <Chip label="Name" color="primary"  />
-                                        </TableCell>
-                                        {/* <TableCell >
-                                          <Chip label="AutoState" color="primary"  />
-                                        </TableCell> */}
-                                        <TableCell >
-                                          <Chip label="Members" color="primary"  />
+                                          <Typography variant="h6" sx={{ flexGrow: 1}} color="text.secondary" gutterBottom>
+                                            Name
+                                          </Typography>
                                         </TableCell>
                                         <TableCell >
-                                          <Chip label="MTU" color="primary"  />
+                                          <Typography variant="h6" sx={{ flexGrow: 1}} color="text.secondary" gutterBottom>
+                                            Members
+                                          </Typography>
+                                        </TableCell>
+                                        <TableCell >
+                                          <Typography variant="h6" sx={{ flexGrow: 1}} color="text.secondary" gutterBottom>
+                                            MTU
+                                          </Typography>
                                         </TableCell>
                                       </TableRow>
                                     </TableHead>
@@ -582,6 +618,7 @@ function App() {
                                     
                                     </Table>
                                     </TableContainer>
+                                  </Paper>
                             </CardContent>
                           </Item>
                         </Card>
@@ -604,8 +641,8 @@ function App() {
                       <Typography sx={{ flexGrow: 1}} color="text.secondary" gutterBottom>
                         Interface Status
                       </Typography>
-                      <Button size="small" disabled={intfStatusRpcStatus === 1} onClick={start_interface_rpc} startIcon={<PlayArrowIcon/>}>start</Button>
-                      <Button size="small" disabled={intfStatusRpcStatus === 0} onClick={stop_interface_status_rpc} startIcon={<StopIcon/>} color="error">stop</Button>
+                      <Button color="error" size="small" disabled={intfStatusRpcStatus === 1} onClick={start_interface_rpc} startIcon={<PlayArrowIcon/>}>start</Button>
+                      <Button color="error" size="small" disabled={intfStatusRpcStatus === 0} onClick={stop_interface_status_rpc} startIcon={<StopIcon/>}>stop</Button>
                     </CardActions>
                     <CardContent>
                       {/* {Object.keys(intfRows).sort().map((k, i) => {
@@ -680,10 +717,10 @@ function App() {
                       <Typography sx={{ flexGrow: 1}} color="text.secondary" gutterBottom>
                         Interface Statistics
                       </Typography>
-                      <TextField id="outlined-basic" label="Ethernet" value={sampleEth} onChange={setEth} variant="outlined"/>
-                      <TextField id="outlined-basic" label="Interval" value={sampleInterval} onChange={setSampleInt} variant="outlined"/>
-                      <Button size="small" disabled={intfStatusSampleRpcStatus === 1} onClick={start_interface_sample_rpc} startIcon={<PlayArrowIcon/>}>start</Button>
-                      <Button size="small" disabled={intfStatusSampleRpcStatus === 0} onClick={stop_interface_sample_rpc} startIcon={<StopIcon/>} color="error">stop</Button>
+                      <TextField color="error" id="outlined-basic" label="Ethernet" value={sampleEth} onChange={setEth} variant="outlined"/>
+                      {/* <TextField color="error" id="outlined-basic" label="Interval" value={sampleInterval} onChange={setSampleInt} variant="outlined"/> */}
+                      <Button color="error" size="small" disabled={intfStatusSampleRpcStatus === 1} onClick={start_interface_sample_rpc} startIcon={<PlayArrowIcon/>}>start</Button>
+                      <Button color="error" size="small" disabled={intfStatusSampleRpcStatus === 0} onClick={stop_interface_sample_rpc} startIcon={<StopIcon/>}>stop</Button>
                     </CardActions>
                     <CardContent>
                       <div className="p-3 m-4 border border-muted">
@@ -861,10 +898,10 @@ function App() {
                           gNMI Web client
                       </Typography>
                     </Item>
-                    <Item><TextField id="outlined-basic" label="Switch IP" value={switchIp} onChange={setIp} variant="outlined"/></Item>
-                    <Item><TextField id="outlined-basic" label="Mgmt Username" value={username} onChange={setName} variant="outlined"/></Item>
-                    <Item><TextField id="outlined-basic" label="Mgmt Password" type='password' value={password} onChange={setPass} variant="outlined"/></Item>
-                    <Item><LoadingButton startIcon={<LoginIcon />} loading={loading} size="large" variant="contained" onClick={gnmi_connect}>Connect</LoadingButton></Item>
+                    <Item><TextField color="error" id="outlined-basic" label="Switch IP" value={switchIp} onChange={setIp} variant="outlined"/></Item>
+                    <Item><TextField color="error" id="outlined-basic" label="Mgmt Username" value={username} onChange={setName} variant="outlined"/></Item>
+                    <Item><TextField color="error" id="outlined-basic" label="Mgmt Password" type='password' value={password} onChange={setPass} variant="outlined"/></Item>
+                    <Item><LoadingButton color="error" startIcon={<LoginIcon />} loading={loading} size="large" variant="contained" onClick={gnmi_connect}>Connect</LoadingButton></Item>
                   </Stack>
                 </Paper>
               </Container>
