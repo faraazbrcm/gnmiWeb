@@ -13,13 +13,17 @@ Install Python 3.x (Preferably 3.10.4 - Tested using this version).
 #### Installing server dependencies
 
 **cd <repo_root>/server**
+
 **python3 -m venv venv**
+
 **source ./venv/bin/activate**
+
 **pip3 install -r requirements.txt**
 
 #### Starting server
 
 **export FLASK_APP=server**
+
 **flask run**
 
 ### Client prerequisite
@@ -37,7 +41,9 @@ https://github.com/nvm-sh/nvm#installing-and-updating
 ### Steps to start Client App
 
 **cd <repo_root>**
+
 **npm install**
+
 **npm start**
 
 Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
