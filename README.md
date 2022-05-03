@@ -22,6 +22,8 @@ Install Python 3.x (Preferably 3.10.4 - Tested using this version).
 
 #### Starting server
 
+**source ./venv/bin/activate**
+
 **export FLASK_APP=server**
 
 **flask run**
