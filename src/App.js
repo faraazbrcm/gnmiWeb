@@ -178,9 +178,9 @@ function App() {
       if (stats_val > max) {
         setMax(stats_val)
       }
-      // if (stats_val < min) {
-      //   setMin(stats_val)
-      // }
+      if (stats_val < min) {
+        setMin(stats_val)
+      }
       if (stats_name == "in-pkts") {
         SetintfSampleInPktsData((prevState) => {
           let updatedVals = [
@@ -278,6 +278,20 @@ function App() {
     rest_stats_data();
   }
 
+  const delete_vlan = () => {
+    axios.delete("/delete_vlan/"+sid+"/"+"Vlan"+vlanStr)
+    .then(function (response) {
+      console.log(response);
+      setSnackMsg("VLAN "+vlanStr+" Deleted!");
+      setshowSnack(true);
+    })
+    .catch(function (error) {
+      console.log(error.response);
+      setSnackMsg("VLAN "+vlanStr+" Deletion failed - " + error.response.data.message);
+      setshowSnack(true);
+    });
+  }
+
   const create_vlan = () => {
     axios.post("/create_vlan/"+sid+"/"+"Vlan"+vlanStr)
     .then(function (response) {
@@ -286,8 +300,8 @@ function App() {
       setshowSnack(true);
     })
     .catch(function (error) {
-      console.log(error);
-      setSnackMsg("VLAN "+vlanStr+" Creation failed");
+      console.log(error.response);
+      setSnackMsg("VLAN "+vlanStr+" Creation failed - " + error.response.data.message);
       setshowSnack(true);
     });
   }
@@ -300,8 +314,36 @@ function App() {
       setshowSnack(true);
     })
     .catch(function (error) {
+      console.log(error.response);
+      setSnackMsg("VLAN "+vlanId+" Member Assignment failed - " + error.response.data.message);
+      setshowSnack(true);
+    });
+  }
+
+  const del_vlan_membership = () => {
+    axios.delete("/del_vlan_membership/"+sid+"/"+phyPort)
+    .then(function (response) {
+      console.log(response);
+      setSnackMsg("Deleted VLAN "+vlanId+"'s Membership!");
+      setshowSnack(true);
+    })
+    .catch(function (error) {
+      console.log(error.response);
+      setSnackMsg("VLAN "+vlanId+" Member deletion failed - " + error.response.data.message);
+      setshowSnack(true);
+    });
+  }
+
+  const del_vlan_mtu = () => {
+    axios.delete("/del_vlan_mtu/"+sid+"/"+"Vlan"+vlanStr)
+    .then(function (response) {
+      console.log(response);
+      setSnackMsg("Deletion of VLAN "+vlanStr+"'s MTU passed! "+mtu);
+      setshowSnack(true);
+    })
+    .catch(function (error) {
       console.log(error);
-      setSnackMsg("VLAN "+vlanId+" Member Assignment failed");
+      setSnackMsg("Deletion of VLAN "+vlanStr+"'s MTU failed - " + error.response.data.message);
       setshowSnack(true);
     });
   }
@@ -315,7 +357,7 @@ function App() {
     })
     .catch(function (error) {
       console.log(error);
-      setSnackMsg("VLAN "+vlanStr+" MTU Assignment failed");
+      setSnackMsg("VLAN "+vlanStr+" MTU Assignment failed - " + error.response.data.message);
       setshowSnack(true);
     });
   }
@@ -372,8 +414,14 @@ function App() {
     })
     .catch(function (error) {
       console.log(error);
-      setSnackMsg("Show VLANs failed" + error);
-      setshowSnack(true);
+      if (error.response.status == 404) {
+        setVlans([]);
+        setSnackMsg("No VLANs to show");
+        setshowSnack(true);
+      } else {
+        setSnackMsg("Show VLANs failed" + error);
+        setshowSnack(true);
+      }
     });
   }
 
@@ -515,7 +563,14 @@ function App() {
                               <TextField color="error" id="outlined-basic" label="Vlan Name" value={vlanStr} onChange={popVlanStr} variant="outlined"/>
                             </CardActions>
                             <CardContent>
-                              <Button color="error" variant="contained" onClick={create_vlan}>Create</Button>
+                              <Grid container spacing={2}>
+                                <Grid item>
+                                  <Button color="error" variant="contained" onClick={create_vlan}>Create</Button>
+                                </Grid>
+                                <Grid item>
+                                  <Button color="error" variant="contained" onClick={delete_vlan}>Delete</Button>
+                                </Grid>
+                              </Grid>
                             </CardContent>
                           </Card>
                         </Grid>
@@ -531,7 +586,14 @@ function App() {
                               <TextField color="error" id="outlined-basic" label="MTU" value={mtu} onChange={popMtu} variant="outlined"/>
                             </CardActions>
                             <CardContent>
-                              <Button  color="error" variant="contained" onClick={vlan_mtu}>Assign MTU</Button>
+                              <Grid container spacing={2}>
+                                <Grid item>
+                                  <Button  color="error" variant="contained" onClick={vlan_mtu}>Assign MTU</Button>
+                                </Grid>
+                                <Grid item>
+                                  <Button  color="error" variant="contained" onClick={del_vlan_mtu}>Delete MTU</Button>
+                                </Grid>
+                              </Grid>
                             </CardContent>
                           </Card>
                         </Grid>
@@ -547,7 +609,14 @@ function App() {
                               <TextField color="error" id="outlined-basic" label="Port" value={phyPort} onChange={popPhyPort} variant="outlined"/>
                             </CardActions>
                             <CardContent>
-                              <Button  color="error" variant="contained" onClick={vlan_membership}>Assign Member</Button>
+                              <Grid container spacing={2}>
+                                <Grid item>
+                                  <Button  color="error" variant="contained" onClick={vlan_membership}>Assign Member</Button>
+                                </Grid>
+                                <Grid item>
+                                  <Button  color="error" variant="contained" onClick={del_vlan_membership}>Delete Member</Button>
+                                </Grid>
+                              </Grid>
                             </CardContent>
                           </Card>
                         </Grid>
