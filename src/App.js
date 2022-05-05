@@ -7,10 +7,8 @@ import Typography from '@mui/material/Typography';
 import Grid from '@mui/material/Grid';
 import TextField from '@mui/material/TextField';
 import Button from '@mui/material/Button';
-import ButtonGroup from '@mui/material/ButtonGroup';
 import Paper from '@mui/material/Paper';
 import Container from '@mui/material/Container';
-import broadcom_logo from './broadcom.png';
 import Toolbar from '@mui/material/Toolbar';
 import '@fontsource/roboto/300.css';
 import '@fontsource/roboto/400.css';
@@ -20,7 +18,6 @@ import Stack from '@mui/material/Stack';
 import { styled } from '@mui/material/styles';
 import LoadingButton from '@mui/lab/LoadingButton';
 import LoginIcon from '@mui/icons-material/Login';
-import LogoutIcon from '@mui/icons-material/Logout';
 import Tabs from '@mui/material/Tabs';
 import Tab from '@mui/material/Tab';
 import Card from '@mui/material/Card';
@@ -36,30 +33,43 @@ import TableRow from '@mui/material/TableRow';
 import Chip from '@mui/material/Chip';
 import StopIcon from '@mui/icons-material/Stop';
 import Select from '@mui/material/Select';
-import {
-  Resizable,
-  Charts,
-  ChartContainer,
-  ChartRow,
-  YAxis,
-  styler,
-  LineChart,
-  BarChart,
-  ScatterChart
-} from "react-timeseries-charts";
-import { TimeSeries, Index } from "pondjs";
 import Snackbar from '@mui/material/Snackbar';
-import { fontSize } from '@mui/system';
 import MenuItem from '@mui/material/MenuItem';
 
-const style = styler([
-  {
-    key: "precip",
-    color: "#260105",
-    selected: "#2CB1CF",
-    fontSize: 30
-  }
-]);
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend,
+} from 'chart.js';
+
+import { Line } from 'react-chartjs-2';
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend
+);
+
+export const options = {
+  responsive: true,
+  plugins: {
+    legend: {
+      position: 'top',
+    },
+    title: {
+      display: true,
+      text: 'SONiC Interface Statistics',
+    },
+  },
+};
 
 const Item = styled(Paper)(({ theme }) => ({
   backgroundColor: theme.palette.mode === 'dark' ? '#1A2027' : '#fff',
@@ -72,8 +82,8 @@ const Item = styled(Paper)(({ theme }) => ({
 function App() {
   const [socket, setSocket] = useState(null);
   const [sid, setSid] = useState(null);
-  const [switchIp, setSwitchIp] = useState("10.59.135.173");
-  const [sampleEth, setSampleEth] = useState("Ethernet11");
+  const [switchIp, setSwitchIp] = useState("10.193.93.70");
+  const [sampleEth, setSampleEth] = useState("Ethernet0");
   const [sampleInterval, setSampleInterval] = useState(30);
   const [username, setUsername] = useState("admin");
   const [password, setPassword] = useState("broadcom");
@@ -83,8 +93,6 @@ function App() {
   const [intfRows, setIntfRows] = useState({});
   const [intfStatusRpcStatus, SetIntfStatusRpcStatus] = useState(0);
   const [intfStatusSampleRpcStatus, SetIntfStatusSampleRpcStatus] = useState(0);
-  const [min, setMin] = useState(500);
-  const [max, setMax] = useState(1000);
   const [showSnack, setshowSnack] = useState(false);
   const [snackMsg, setSnackMsg] = useState("");
   const [vlans, setVlans] = useState([])
@@ -93,69 +101,56 @@ function App() {
   const [phyPort, setPhyPort] = useState("Ethernet11")
   const [mtu, setMtu] = useState(1312)
   const [vlanIds, setVlanIds] = useState([])
+  const [inPktsChartData, setInPktsChartData ] = useState({
+    labels: [],
+    datasets: [
+      {
+        label: 'InPkts',
+        data: [],
+        borderColor: 'rgb(255, 99, 132)',
+        backgroundColor: 'rgba(255, 99, 132, 0.5)',
+      },
+    ]});
 
-  //In-Pkts
-  const inpktsData = {name: "inpkts",
-    columns: ["index", "precip"],
-    points: [
-      [Index.getIndexString("20s", new Date()), 0 ],
-      [Index.getIndexString("20s", new Date()), 0 ],
-    ]
-  }
-  const [intfSampleInPktsData, SetintfSampleInPktsData] = useState(inpktsData);
-  var inPktsSeries = new TimeSeries(intfSampleInPktsData);
+  const [outPktsChartData, setOutPktsChartData ] = useState({
+    labels: [],
+    datasets: [
+      {
+        label: 'OutPkts',
+        data: [],
+        borderColor: 'rgb(0, 71, 179)',
+        backgroundColor: 'rgba(0, 71, 179, 0.5)',
+      },
+    ]});
 
-  //Out-Pkts
-  const outPktsData = {name: "outpkts",
-    columns: ["index", "precip"],
-    points: [
-      [Index.getIndexString("20s", new Date()), 0 ],
-      [Index.getIndexString("20s", new Date()), 0 ],
-    ]
-  }
-  const [intfSampleOutPktsData, SetintfSampleOutPktsData] = useState(outPktsData);
-  var outPktsSeries = new TimeSeries(intfSampleOutPktsData);
+    const [inUniPktsChartData, setInUniPktsChartData ] = useState({
+      labels: [],
+      datasets: [
+        {
+          label: 'InUniCastPkts',
+          data: [],
+          borderColor: 'rgb(153, 102, 51)',
+          backgroundColor: 'rgba(153, 102, 51, 0.5)',
+        },
+      ]});
+
+    const [outUniPktsChartData, setOutUniPktsChartData ] = useState({
+      labels: [],
+      datasets: [
+        {
+          label: 'OutUniCastPkts',
+          data: [],
+          borderColor: 'rgb(0, 153, 51)',
+          backgroundColor: 'rgba(0, 153, 51, 0.5)',
+        },
+      ],
+    });
 
   function sortIntf (a, b) {
     const intf1 = a.split(/([0-9]+)/)[1]
     const intf2 = b.split(/([0-9]+)/)[1]
     console.log(intf1, intf2)
     return intf1-intf2;
-  }
-
-  //In-Unicast-Pkts
-  const inUniPktsData = {name: "inunipkts",
-    columns: ["index", "precip"],
-    points: [
-      [Index.getIndexString("20s", new Date()), 0 ],
-      [Index.getIndexString("20s", new Date()), 0 ],
-    ]
-  }
-  const [intfSampleInUnicastPktsData, SetintfSampleInUnicastPktsData] = useState(inUniPktsData);
-  var inUnicastPktsSeries = new TimeSeries(intfSampleInUnicastPktsData);
-
-  //Out-Unicast-Pkts
-  const outUniPktsData = {name: "outunipkts",
-    columns: ["index", "precip"],
-    points: [
-      [Index.getIndexString("20s", new Date()), 0 ],
-      [Index.getIndexString("20s", new Date()), 0 ],
-    ]
-  }
-  const [intfSampleOutUnicastPktsData, SetintfSampleOutUnicastPktsData] = useState(outUniPktsData);
-  var outUnicastPktsSeries = new TimeSeries(intfSampleOutUnicastPktsData);
-
-  const set_val = () => {
-    SetintfSampleInPktsData((prevState) => {
-      let updatedVals = {
-        points: [
-          ...prevState.points,
-          [Index.getIndexString("20s", new Date()), 4000]
-        ]
-      }
-      return {...prevState, ...updatedVals}
-    });
-    console.log(intfSampleInPktsData);
   }
 
   useEffect(() => {
@@ -182,65 +177,95 @@ function App() {
     });
 
     newSocket.on("interface_sample", (msg) => {
-      //console.log(msg)
-      var stats_name = Object.keys(msg)[0]
-      var stats_val = msg[stats_name]
-      if (stats_val > max) {
-        setMax(stats_val)
-      }
-      if (stats_val < min) {
-        setMin(stats_val)
-      }
-      if (stats_name == "in-pkts") {
-        SetintfSampleInPktsData((prevState) => {
-          let updatedVals = [
-            ...prevState.points,
-              [Index.getIndexString("20s", new Date()), stats_val]
-            ]
-          console.log("stats_name", updatedVals)
-          return {...prevState, points:updatedVals}
-        });
-        console.log(stats_name, stats_val, intfSampleInPktsData);
-      } else if (stats_name == "out-pkts") {
-          SetintfSampleOutPktsData((prevState) => {
-            let updatedVals = [
-              ...prevState.points,
-                [Index.getIndexString("20s", new Date()), stats_val]
-              ]
-            return {...prevState, points:updatedVals}
-          });
-          console.log(intfSampleOutPktsData);
-        } else if (stats_name == "in-unicast-pkts") {
-            SetintfSampleInUnicastPktsData((prevState) => {
-              let updatedVals = [
-                ...prevState.points,
-                  [Index.getIndexString("20s", new Date()), stats_val]
-                ]
-              return {...prevState, points:updatedVals}
-            });
-            console.log(intfSampleInUnicastPktsData);
-        } else if (stats_name == "out-unicast-pkts") {
-            SetintfSampleOutUnicastPktsData((prevState) => {
-              let updatedVals = [
-                ...prevState.points,
-                  [Index.getIndexString("20s", new Date()), stats_val]
-                ]
-              return {...prevState, points:updatedVals}
-            });
-            console.log(intfSampleOutUnicastPktsData);
-        } else {
-        //console.log("Not interested in this data");
-      }
+      console.log("Received sample notification ==> ", msg);
+      
+      setInPktsChartData((prevState) => {
+        let newLabels = [
+          ...prevState.labels.slice(-9),
+          new Date().toLocaleString().substr(10, 7)
+        ]
+        let inPData = [
+          ...prevState.datasets
+        ]
+        
+        console.log("**in-pkts - Labels**", newLabels);
+
+        //Set InPkts
+        inPData[0].data.push(msg['in-pkts']);
+        inPData[0].data = inPData[0].data.slice(-10);
+        console.log("**in-pkts**", msg['in-pkts'], inPData[0].data);
+
+        return {...prevState, labels:newLabels, datasets:inPData}
+      
+      });
+
+      setOutPktsChartData((prevState) => {
+        let newOutLabels = [
+          ...prevState.labels.slice(-9),
+          new Date().toLocaleString().substr(10, 7)
+        ]
+        let outPData = [
+          ...prevState.datasets
+        ]
+        
+        console.log("**out-pkts - Labels**", newOutLabels);
+        
+        //Set OutPkts
+        outPData[0].data.push(msg['out-pkts']);
+        outPData[0].data = outPData[0].data.slice(-10);
+        console.log("**out-pkts**", msg['out-pkts'], outPData[0].data);
+        
+
+        return {...prevState, labels:newOutLabels, datasets:outPData}
+      
+      });
+
+      setInUniPktsChartData((prevState) => {
+        let newInUniLabels = [
+          ...prevState.labels.slice(-9),
+          new Date().toLocaleString().substr(10, 7)
+        ]
+        let inUData = [
+          ...prevState.datasets
+        ]
+        
+        console.log("**in-unicast-pkts - Labels**", newInUniLabels);
+        
+        //Set InUniPkts
+        inUData[0].data.push(msg['in-unicast-pkts']);
+        inUData[0].data = inUData[0].data.slice(-10);
+        console.log("**in-unicast-pkts**", msg['in-unicast-pkts'], inUData[0].data);
+
+        return {...prevState, labels:newInUniLabels, datasets:inUData}
+      
+      });
+
+      setOutUniPktsChartData((prevState) => {
+        let newOLabels = [
+          ...prevState.labels.slice(-9),
+          new Date().toLocaleString().substr(10, 7)
+        ]
+        let OUData = [
+          ...prevState.datasets
+        ]
+        
+        console.log("**out-unicast-pkts - Labels**", newOLabels);
+
+        //Set OutUniPkts
+        OUData[0].data.push(msg['out-unicast-pkts']);
+        OUData[0].data = OUData[0].data.slice(-10);
+        console.log("**out-unicast-pkts**", msg['out-unicast-pkts'], OUData[0].data);
+
+        return {...prevState, labels:newOLabels, datasets:OUData}
+      
+      });
+
     });
 
     return () => newSocket.close();
   }, [setSocket]);
 
   const rest_stats_data = () => {
-    SetintfSampleInPktsData(inpktsData);
-    SetintfSampleOutPktsData(outPktsData);
-    SetintfSampleInUnicastPktsData(inUniPktsData);
-    SetintfSampleOutUnicastPktsData(outPktsData);
     setIntfRows({})
     SetIntfStatusRpcStatus(0);
     SetIntfStatusSampleRpcStatus(0);
@@ -827,150 +852,22 @@ function App() {
                     </CardActions>
                     <CardContent>
                       <div className="p-3 m-4 border border-muted">
-                        <Typography sx={{ flexGrow: 1}} color="text.secondary" gutterBottom>
-                          In-pkts
-                        </Typography>
-                        <Resizable>
-                          <ChartContainer timeRange={inPktsSeries.range()}>
-                          <ChartRow height="250">
-                              <YAxis
-                                id="pkts"
-                                label="pkts"
-                                // min={min}
-                                // max={max}
-                                type="linear"
-                              />
-                              <Charts>
-                                <LineChart
-                                  axis="pkts"
-                                  style={style}
-                                  spacing={1}
-                                  columns={["precip"]}
-                                  series={inPktsSeries}
-                                  minBarHeight={1}
-                                />
-                                <ScatterChart
-                                  axis="pkts"
-                                  style={style}
-                                  spacing={1}
-                                  columns={["precip"]}
-                                  series={inPktsSeries}
-                                />
-                              </Charts>
-                            </ChartRow>
-                          </ChartContainer>
-                        </Resizable>
+                        <Line data={inPktsChartData} />
                       </div>
                     </CardContent>
                     <CardContent>
                       <div className="p-3 m-4 border border-muted">
-                      <Typography sx={{ flexGrow: 1}} color="text.secondary" gutterBottom>
-                          Out-pkts
-                        </Typography>
-                        <Resizable>
-                          <ChartContainer timeRange={outPktsSeries.range()}>
-                            <ChartRow height="250">
-                              <YAxis
-                                id="pkts"
-                                label="pkts"
-                                min={min}
-                                max={max}
-                                type="linear"
-                              />
-                              <Charts>
-                                <LineChart
-                                  axis="pkts"
-                                  style={style}
-                                  spacing={1}
-                                  columns={["precip"]}
-                                  series={outPktsSeries}
-                                  minBarHeight={1}
-                                />
-                                <ScatterChart
-                                  axis="pkts"
-                                  style={style}
-                                  spacing={1}
-                                  columns={["precip"]}
-                                  series={outPktsSeries}
-                                />
-                              </Charts>
-                            </ChartRow>
-                          </ChartContainer>
-                        </Resizable>
+                        <Line data={outPktsChartData} />
                       </div>
                     </CardContent>
                     <CardContent>
                       <div className="p-3 m-4 border border-muted">
-                      <Typography sx={{ flexGrow: 1}} color="text.secondary" gutterBottom>
-                          In-Unicast-Pkts
-                        </Typography>
-                        <Resizable>
-                          <ChartContainer timeRange={inUnicastPktsSeries.range()}>
-                            <ChartRow height="250">
-                              <YAxis
-                                id="pkts"
-                                label="pkts"
-                                min={min}
-                                max={max}
-                                type="linear"
-                              />
-                              <Charts>
-                                <LineChart
-                                  axis="pkts"
-                                  style={style}
-                                  spacing={1}
-                                  columns={["precip"]}
-                                  series={inUnicastPktsSeries}
-                                  minBarHeight={1}
-                                />
-                                <ScatterChart
-                                  axis="pkts"
-                                  style={style}
-                                  spacing={1}
-                                  columns={["precip"]}
-                                  series={inUnicastPktsSeries}
-                                />
-                              </Charts>
-                            </ChartRow>
-                          </ChartContainer>
-                        </Resizable>
+                        <Line data={inUniPktsChartData} />
                       </div>
                     </CardContent>
                     <CardContent>
                       <div className="p-3 m-4 border border-muted">
-                      <Typography sx={{ flexGrow: 1}} color="text.secondary" gutterBottom>
-                          Out-Unicast-Pkts
-                        </Typography>
-                        <Resizable>
-                          <ChartContainer timeRange={outUnicastPktsSeries.range()}>
-                            <ChartRow height="250">
-                              <YAxis
-                                id="pkts"
-                                label="pkts"
-                                min={min}
-                                max={max}
-                                type="linear"
-                              />
-                              <Charts>
-                                <LineChart
-                                  axis="pkts"
-                                  style={style}
-                                  spacing={1}
-                                  columns={["precip"]}
-                                  series={outUnicastPktsSeries}
-                                  minBarHeight={1}
-                                />
-                                <ScatterChart
-                                  axis="pkts"
-                                  style={style}
-                                  spacing={1}
-                                  columns={["precip"]}
-                                  series={outUnicastPktsSeries}
-                                />
-                              </Charts>
-                            </ChartRow>
-                          </ChartContainer>
-                        </Resizable>
+                        <Line data={outUniPktsChartData} />
                       </div>
                     </CardContent>
                   </Card>
