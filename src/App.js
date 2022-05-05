@@ -113,6 +113,13 @@ function App() {
   const [intfSampleOutPktsData, SetintfSampleOutPktsData] = useState(outPktsData);
   var outPktsSeries = new TimeSeries(intfSampleOutPktsData);
 
+  function sortIntf (a, b) {
+    const intf1 = a.split(/([0-9]+)/)[1]
+    const intf2 = b.split(/([0-9]+)/)[1]
+    console.log(intf1, intf2)
+    return intf1-intf2;
+  }
+
   //In-Unicast-Pkts
   const inUniPktsData = {name: "inunipkts",
     columns: ["index", "precip"],
@@ -741,7 +748,7 @@ function App() {
                         </TableHead>
                         <TableBody> */}
                           <Grid container spacing={2}>
-                        {Object.keys(intfRows).sort().map((k, i) => {
+                        {Object.keys(intfRows).sort(sortIntf).map((k, i) => {
                           let status = intfRows[k];
                           return(
                             <Grid item xs={2}>
