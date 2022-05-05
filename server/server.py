@@ -1,6 +1,7 @@
 
 from flask_socketio import SocketIO
 from flask import Flask, abort, jsonify, make_response, request, Response, stream_with_context
+from requests import delete
 from gnmi import GNMIConnection, gNMIError, extract_gnmi_val
 import grpc
 import pdb
@@ -83,10 +84,14 @@ def get_vlans(sid):
         payloadStr = resp[key].val.json_ietf_val.decode()
         payloadStr = json.loads(payloadStr)
     if status == 0:
-        payload = payloadStr["sonic-vlan:sonic-vlan"]["VLAN"]["VLAN_LIST"]
-        print(json.dumps(payload, indent=2))
-        status = 200
-        data = {'data': payload, 'code': 'SUCCESS'}
+        if "sonic-vlan:sonic-vlan" in payloadStr:
+            payload = payloadStr["sonic-vlan:sonic-vlan"]["VLAN"]["VLAN_LIST"]
+            print(json.dumps(payload, indent=2))
+            status = 200
+            data = {'data': payload, 'code': 'SUCCESS'}
+        else:
+            status = 404
+            data = {'data': "No Vlans to show", 'code': 'SUCCESS'}
     else:
         status = 404
         data = {'data': "Error in getting vlans", 'code': 'FAILURE'}
@@ -110,8 +115,35 @@ def do_update(sid, update):
                 status = 500
     else:
         status = 500
-    data = {message:message}
+    data = {"message":message}
     return make_response(jsonify(data), status)
+
+def do_delete(sid, delete):
+    server_resp = sessions[sid]["gnmi_con"].gnmi_delete(delete=delete)
+    message = "Resource Deleted!"
+    if isinstance(server_resp, grpc.RpcError):
+        status = 500
+        message = server_resp.details()
+    elif isinstance(server_resp, tuple):
+        status = server_resp[1]
+        if status == 0:
+            status = 201
+        else:
+            if isinstance(server_resp[0], gNMIError):
+                status = 500
+                message = server_resp[0].details
+            else:
+                status = 500
+    else:
+        status = 500
+    data = {"message":message}
+    return make_response(jsonify(data), status)
+
+@app.route("/delete_vlan/<string:sid>/<string:vlan>", methods=["delete"])
+def delete_vlan(sid, vlan):
+    path = f"/openconfig-interfaces:interfaces/interface[name={vlan}]"
+    delete = [path]
+    return do_delete(sid, delete)
 
 @app.route("/create_vlan/<string:sid>/<string:vlan>", methods=["post"])
 def create_vlan(sid, vlan):
@@ -119,6 +151,18 @@ def create_vlan(sid, vlan):
     payload = {"openconfig-interfaces:interfaces": {"interface": [{"name": vlan, "config": {"name": vlan}}]}}
     update = [(path, payload)]
     return do_update(sid, update)
+
+@app.route("/del_vlan_membership/<string:sid>/<string:port>", methods=["delete"])
+def del_vlan_membership(sid, port):
+    path = f"/openconfig-interfaces:interfaces/interface[name={port}]/openconfig-if-ethernet:ethernet/openconfig-vlan:switched-vlan/config/access-vlan"
+    delete = [path]
+    return do_delete(sid, delete)
+
+@app.route("/del_vlan_mtu/<string:sid>/<string:vlan>", methods=["delete"])
+def del_vlan_mtu(sid, vlan):
+    path = f"/openconfig-interfaces:interfaces/interface[name={vlan}]/config/mtu"
+    delete = [path]
+    return do_delete(sid, delete)
 
 @app.route("/vlan_membership/<string:sid>/<int:vlan>/<string:port>", methods=["post"])
 def vlan_membership(sid, vlan, port):
@@ -215,13 +259,14 @@ def interface_sample(sid, eth, interval, action):
                         #print(str(resp))
                         if resp.sync_response:
                             continue
+                        stats = {}
                         for update in resp.update.update:
                             count = count + 1000
                             stats_name = update.path.elem[0].name
                             stats_val = extract_gnmi_val(update.val)
                             print(stats_name, stats_val)
-                            #stats_val= randint(1,500)
-                            sio.emit('interface_sample', {stats_name:stats_val}, room=sid)
+                            stats[stats_name] = stats_val
+                        sio.emit('interface_sample', stats, room=sid)
                 except grpc.RpcError as exp:
                     if exp.code() == grpc.StatusCode.CANCELLED:
                         print("********** cancelled ********")
