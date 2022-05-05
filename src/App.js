@@ -35,6 +35,7 @@ import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import Chip from '@mui/material/Chip';
 import StopIcon from '@mui/icons-material/Stop';
+import Select from '@mui/material/Select';
 import {
   Resizable,
   Charts,
@@ -49,6 +50,7 @@ import {
 import { TimeSeries, Index } from "pondjs";
 import Snackbar from '@mui/material/Snackbar';
 import { fontSize } from '@mui/system';
+import MenuItem from '@mui/material/MenuItem';
 
 const style = styler([
   {
@@ -90,6 +92,7 @@ function App() {
   const [vlanStr, setVlanStr] = useState(10)
   const [phyPort, setPhyPort] = useState("Ethernet11")
   const [mtu, setMtu] = useState(1312)
+  const [vlanIds, setVlanIds] = useState([])
 
   //In-Pkts
   const inpktsData = {name: "inpkts",
@@ -291,6 +294,9 @@ function App() {
       console.log(response);
       setSnackMsg("VLAN "+vlanStr+" Deleted!");
       setshowSnack(true);
+      const newArr = [...vlanIds];
+      newArr.splice(newArr.findIndex(item => item === vlanStr), 1)
+      setVlanIds(newArr);
     })
     .catch(function (error) {
       console.log(error.response);
@@ -305,6 +311,12 @@ function App() {
       console.log(response);
       setSnackMsg("VLAN "+vlanStr+" Created!");
       setshowSnack(true);
+      setVlanIds((prev) => {
+        return [
+          ...prev,
+          vlanStr
+        ]
+      });
     })
     .catch(function (error) {
       console.log(error.response);
@@ -342,29 +354,29 @@ function App() {
   }
 
   const del_vlan_mtu = () => {
-    axios.delete("/del_vlan_mtu/"+sid+"/"+"Vlan"+vlanStr)
+    axios.delete("/del_vlan_mtu/"+sid+"/"+"Vlan"+vlanId)
     .then(function (response) {
       console.log(response);
-      setSnackMsg("Deletion of VLAN "+vlanStr+"'s MTU passed! "+mtu);
+      setSnackMsg("Deletion of VLAN "+vlanId+"'s MTU passed! "+mtu);
       setshowSnack(true);
     })
     .catch(function (error) {
       console.log(error);
-      setSnackMsg("Deletion of VLAN "+vlanStr+"'s MTU failed - " + error.response.data.message);
+      setSnackMsg("Deletion of VLAN "+vlanId+"'s MTU failed - " + error.response.data.message);
       setshowSnack(true);
     });
   }
 
   const vlan_mtu = () => {
-    axios.post("/vlan_mtu/"+sid+"/"+"Vlan"+vlanStr+"/"+mtu)
+    axios.post("/vlan_mtu/"+sid+"/"+"Vlan"+vlanId+"/"+mtu)
     .then(function (response) {
       console.log(response);
-      setSnackMsg("Assigned VLAN "+vlanStr+" a MTU! "+mtu);
+      setSnackMsg("Assigned VLAN "+vlanId+" a MTU! "+mtu);
       setshowSnack(true);
     })
     .catch(function (error) {
       console.log(error);
-      setSnackMsg("VLAN "+vlanStr+" MTU Assignment failed - " + error.response.data.message);
+      setSnackMsg("VLAN "+vlanId+" MTU Assignment failed - " + error.response.data.message);
       setshowSnack(true);
     });
   }
@@ -572,10 +584,10 @@ function App() {
                             <CardContent>
                               <Grid container spacing={2}>
                                 <Grid item>
-                                  <Button color="error" variant="contained" onClick={create_vlan}>Create</Button>
+                                  <Button color="error" disabled={vlanStr.length === 0} variant="contained" onClick={create_vlan}>Create</Button>
                                 </Grid>
                                 <Grid item>
-                                  <Button color="error" variant="contained" onClick={delete_vlan}>Delete</Button>
+                                  <Button color="error" disabled={vlanStr.length === 0} variant="contained" onClick={delete_vlan}>Delete</Button>
                                 </Grid>
                               </Grid>
                             </CardContent>
@@ -585,20 +597,35 @@ function App() {
                           <Card>
                             <CardActions sx={{ paddingTop: 5  }}>
                               <Typography sx={{ flexGrow: 1}} color="text.secondary" gutterBottom>
-                                MTU
+                                Assign MTU
                               </Typography>
                             </CardActions>
                             <CardActions sx={{ paddingTop: 5  }}>
                               <TextField color="error" id="outlined-basic" label="Vlan ID" value={vlanId} onChange={popVlanId} variant="outlined"/>
+                              {/* <Select
+                                value={vlanId}
+                                label="Age"
+                                color="error"
+                                autoWidth
+                                displayEmpty
+                                onChange={popVlanId}>
+                                  {
+                                    vlanIds.map(
+                                      (id) => (
+                                        <MenuItem value={id} key={id}>{id}</MenuItem>
+                                      )
+                                    )
+                                  }
+                              </Select> */}
                               <TextField color="error" id="outlined-basic" label="MTU" value={mtu} onChange={popMtu} variant="outlined"/>
                             </CardActions>
                             <CardContent>
                               <Grid container spacing={2}>
                                 <Grid item>
-                                  <Button  color="error" variant="contained" onClick={vlan_mtu}>Assign MTU</Button>
+                                  <Button  color="error" disabled={vlanId.length === 0 || mtu.length === 0} variant="contained" onClick={vlan_mtu}>Assign MTU</Button>
                                 </Grid>
                                 <Grid item>
-                                  <Button  color="error" variant="contained" onClick={del_vlan_mtu}>Delete MTU</Button>
+                                  <Button  color="error" disabled={vlanId.length === 0} variant="contained" onClick={del_vlan_mtu}>Delete MTU</Button>
                                 </Grid>
                               </Grid>
                             </CardContent>
@@ -618,10 +645,10 @@ function App() {
                             <CardContent>
                               <Grid container spacing={2}>
                                 <Grid item>
-                                  <Button  color="error" variant="contained" onClick={vlan_membership}>Assign Member</Button>
+                                  <Button  disabled={vlanId.length === 0 || phyPort.length === 0} color="error" variant="contained" onClick={vlan_membership}>Assign Member</Button>
                                 </Grid>
                                 <Grid item>
-                                  <Button  color="error" variant="contained" onClick={del_vlan_membership}>Delete Member</Button>
+                                  <Button  disabled={phyPort.length === 0} color="error" variant="contained" onClick={del_vlan_membership}>Delete Member</Button>
                                 </Grid>
                               </Grid>
                             </CardContent>
@@ -809,8 +836,8 @@ function App() {
                               <YAxis
                                 id="pkts"
                                 label="pkts"
-                                min={min}
-                                max={max}
+                                // min={min}
+                                // max={max}
                                 type="linear"
                               />
                               <Charts>
