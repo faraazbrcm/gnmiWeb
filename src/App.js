@@ -35,6 +35,7 @@ import StopIcon from '@mui/icons-material/Stop';
 import Select from '@mui/material/Select';
 import Snackbar from '@mui/material/Snackbar';
 import MenuItem from '@mui/material/MenuItem';
+import theme from './theme';
 
 import {
   Chart as ChartJS,
@@ -79,6 +80,62 @@ const Item = styled(Paper)(({ theme }) => ({
   color: theme.palette.text.secondary,
 }));
 
+function IntfOnChange(props) {
+  const nodata = "No "+props.name+"s"
+  
+  function sortIntf (a, b) {
+    const intf1 = a.split(/([0-9]+)/)[1]
+    const intf2 = b.split(/([0-9]+)/)[1]
+    //console.log(intf1, intf2)
+    return intf1-intf2;
+  }
+
+  return (
+    <TableContainer component={Paper}>
+      <Table  aria-label="simple table">
+        <TableHead>
+          <TableRow>
+            <TableCell>
+              {/* <Chip label={props.name} color="error" variant="outlined" /> */}
+              <Typography variant="h6" sx={{ flexGrow: 1}} color="text.secondary" gutterBottom>
+                {props.name}
+              </Typography>
+            </TableCell>
+            <TableCell align="right">
+              {/* <Chip label="Status" color="error" variant="outlined" /> */}
+              <Typography variant="h6" sx={{ flexGrow: 1}} color="text.secondary" gutterBottom>
+                Status
+              </Typography>
+            </TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+        {Object.keys(props.rows).sort(sortIntf).map((k, i) => {
+          let status = props.rows[k];
+          return (
+            <TableRow key={k} sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
+              <TableCell component="th" scope="row">
+                <Typography variant="h6" component="div" sx={{ flexGrow: 2 }}>
+                  {k}
+                </Typography>
+              </TableCell>
+              <TableCell align="right">
+              {status == "UP" ? (<Chip label="UP" color="success" />) : (<Chip label="DOWN" style={theme.palette.accent} />)}
+              </TableCell>
+            </TableRow>
+          )
+        })}
+        {
+          Object.keys(props.rows).length === 0 &&
+          <Container sx={{padding: 2}}>
+            <Chip label={nodata} color="error" variant="outlined" />
+          </Container>
+        }
+        </TableBody>
+    </Table>
+  </TableContainer>
+  );
+}
 function App() {
   const [socket, setSocket] = useState(null);
   const [sid, setSid] = useState(null);
@@ -90,7 +147,10 @@ function App() {
   const [gConnect, setGConnect] = useState(false);
   const [loading, setLoading] = useState(false);
   const [value, setValue] = useState(2);
-  const [intfRows, setIntfRows] = useState({});
+  const [intfEthernetRows, setIntfEthernetRows] = useState({});
+  const [intfEthRows, setIntfEthRows] = useState({});
+  const [intfVlanRows, setIntfVlanRows] = useState({});
+  const [intfPortChannelRows, setIntfPortChannelRows] = useState({});
   const [intfStatusRpcStatus, SetIntfStatusRpcStatus] = useState(0);
   const [intfStatusSampleRpcStatus, SetIntfStatusSampleRpcStatus] = useState(0);
   const [showSnack, setshowSnack] = useState(false);
@@ -101,7 +161,7 @@ function App() {
   const [phyPort, setPhyPort] = useState("Ethernet11")
   const [mtu, setMtu] = useState(1312)
   const [vlanIds, setVlanIds] = useState([])
-  const [inPktsChartData, setInPktsChartData ] = useState({
+  const inPktsData = {
     labels: [],
     datasets: [
       {
@@ -110,9 +170,11 @@ function App() {
         borderColor: 'rgb(255, 99, 132)',
         backgroundColor: 'rgba(255, 99, 132, 0.5)',
       },
-    ]});
-
-  const [outPktsChartData, setOutPktsChartData ] = useState({
+    ]
+  }
+  const [inPktsChartData, setInPktsChartData ] = useState(inPktsData);
+  
+  const outPktsData = {
     labels: [],
     datasets: [
       {
@@ -121,37 +183,35 @@ function App() {
         borderColor: 'rgb(0, 71, 179)',
         backgroundColor: 'rgba(0, 71, 179, 0.5)',
       },
-    ]});
-
-    const [inUniPktsChartData, setInUniPktsChartData ] = useState({
-      labels: [],
-      datasets: [
-        {
-          label: 'InUniCastPkts',
-          data: [],
-          borderColor: 'rgb(153, 102, 51)',
-          backgroundColor: 'rgba(153, 102, 51, 0.5)',
-        },
-      ]});
-
-    const [outUniPktsChartData, setOutUniPktsChartData ] = useState({
-      labels: [],
-      datasets: [
-        {
-          label: 'OutUniCastPkts',
-          data: [],
-          borderColor: 'rgb(0, 153, 51)',
-          backgroundColor: 'rgba(0, 153, 51, 0.5)',
-        },
-      ],
-    });
-
-  function sortIntf (a, b) {
-    const intf1 = a.split(/([0-9]+)/)[1]
-    const intf2 = b.split(/([0-9]+)/)[1]
-    console.log(intf1, intf2)
-    return intf1-intf2;
+    ]
   }
+  const [outPktsChartData, setOutPktsChartData ] = useState(outPktsData);
+
+  const inUniPktsData = {
+    labels: [],
+    datasets: [
+      {
+        label: 'InUniCastPkts',
+        data: [],
+        borderColor: 'rgb(153, 102, 51)',
+        backgroundColor: 'rgba(153, 102, 51, 0.5)',
+      },
+    ]
+  }
+  const [inUniPktsChartData, setInUniPktsChartData ] = useState(inUniPktsData);
+
+  const OutUniPktsData = {
+    labels: [],
+    datasets: [
+      {
+        label: 'OutUniCastPkts',
+        data: [],
+        borderColor: 'rgb(0, 153, 51)',
+        backgroundColor: 'rgba(0, 153, 51, 0.5)',
+      },
+    ],
+  }
+  const [outUniPktsChartData, setOutUniPktsChartData ] = useState(OutUniPktsData);
 
   useEffect(() => {
     const newSocket = io();
@@ -170,10 +230,30 @@ function App() {
     });
     newSocket.on("interface_on_change", (msg) => {
       console.log(msg)
-      setIntfRows(vals => ({
-        ...vals,
-        ...msg
-      }));
+      let key = Object.keys(msg)[0].toLowerCase();
+      if (key.startsWith("ethernet")) {
+        setIntfEthernetRows(vals => ({
+          ...vals,
+          ...msg
+        }));
+      } else if (key.startsWith("eth")) {
+          setIntfEthRows(vals => ({
+            ...vals,
+            ...msg
+          }));
+      } else if (key.startsWith("vlan")) {
+          setIntfVlanRows(vals => ({
+            ...vals,
+            ...msg
+          }));
+      } else if (key.startsWith("portchannel")) {
+          setIntfPortChannelRows(vals => ({
+            ...vals,
+            ...msg
+          }));
+      } else {
+          console.log("Not interested in ", msg);
+      }
     });
 
     newSocket.on("interface_sample", (msg) => {
@@ -266,9 +346,21 @@ function App() {
   }, [setSocket]);
 
   const rest_stats_data = () => {
-    setIntfRows({})
+    setIntfEthRows({});
+    setIntfEthernetRows({});
+    setIntfVlanRows({});
+    setIntfPortChannelRows({});
     SetIntfStatusRpcStatus(0);
     SetIntfStatusSampleRpcStatus(0);
+    reset_sample_data();
+  }
+
+  const reset_sample_data = () => {
+    SetIntfStatusSampleRpcStatus(0);
+    setInPktsChartData(inPktsData);
+    setOutPktsChartData(outPktsData);
+    setInUniPktsChartData(inUniPktsData);
+    setOutUniPktsChartData(OutUniPktsData);
   }
   const gnmi_connect = (event) => {
     event.preventDefault();
@@ -283,6 +375,7 @@ function App() {
       setSnackMsg("Login Successful")
       setshowSnack(true);
       get_vlans();
+      reset_sample_data();
     })
     .catch(function (error) {
       console.log(error);
@@ -297,7 +390,10 @@ function App() {
     .then(function (response) {
       console.log(response);
       setGConnect(false)
-      setIntfRows({});
+      setIntfEthRows({});
+      setIntfEthernetRows({});
+      setIntfVlanRows({});
+      setIntfPortChannelRows({});
       SetIntfStatusRpcStatus(0);
       intfStatusSampleRpcStatus(0);
       rest_stats_data();
@@ -305,7 +401,10 @@ function App() {
     })
     .catch(function (error) {
       console.log(error);
-      setIntfRows({});
+      setIntfEthRows({});
+      setIntfEthernetRows({});
+      setIntfVlanRows({});
+      setIntfPortChannelRows({});
       SetIntfStatusRpcStatus(0);
       intfStatusSampleRpcStatus(0);
       rest_stats_data();
@@ -514,7 +613,7 @@ function App() {
     })
     .then(function (response) {
       console.log(response);
-      SetIntfStatusSampleRpcStatus(0);
+      reset_sample_data();
     })
     .catch(function (error) {
       console.log(error);
@@ -535,7 +634,10 @@ function App() {
     .catch(function (error) {
       console.log(error);
     });
-    setIntfRows({});
+    setIntfEthRows({});
+    setIntfEthernetRows({});
+    setIntfVlanRows({});
+    setIntfPortChannelRows({});
   };
 
   function a11yProps(index) {
@@ -567,8 +669,12 @@ function App() {
                 BROADCOM
             </Typography>
             { gConnect ? (
-            <Button size="large" variant="primary"  onClick={gnmi_disconnect} sx={{ flexGrow: 0.1 }}>
-              <Typography variant="h6" component="button" sx={{ flexGrow: 1 }}>Disconnect</Typography></Button>
+              <div>
+                <Typography variant="h8" component="toolbar" sx={{ flexGrow: 1 }}>Connected to {switchIp}</Typography>
+                <Button size="large" variant="primary"  onClick={gnmi_disconnect} sx={{ flexGrow: 0.1 }}>
+                  <Typography variant="h6" component="button" sx={{ flexGrow: 1 }}>Disconnect</Typography>
+                </Button>
+              </div>
             ): (<div></div>)
             }
           </Toolbar>
@@ -723,11 +829,6 @@ function App() {
                                                   {row.name}
                                                 </Typography>
                                               </TableCell>
-                                              {/* <TableCell>
-                                                <Typography sx={{ flexGrow: 1}} color="text.secondary" gutterBottom>
-                                                  {row.autostate}
-                                                </Typography>
-                                              </TableCell> */}
                                               <TableCell>
                                                 <Typography sx={{ flexGrow: 1}} color="text.secondary" gutterBottom>
                                                   {row.members}
@@ -764,70 +865,39 @@ function App() {
             {
               value == 1 ? (
                 <Box sx={{ width: '100%', paddingTop: 2 }}>
-                  <Card sx={{ paddingTop: 2  }}>
-                  <CardActions>
-                      <Typography sx={{ flexGrow: 1}} color="text.secondary" gutterBottom>
-                        Interface Status
-                      </Typography>
-                      <Button color="error" size="small" disabled={intfStatusRpcStatus === 1} onClick={start_interface_rpc} startIcon={<PlayArrowIcon/>}>start</Button>
-                      <Button color="error" size="small" disabled={intfStatusRpcStatus === 0} onClick={stop_interface_status_rpc} startIcon={<StopIcon/>}>stop</Button>
-                    </CardActions>
-                    <CardContent>
-                      {/* {Object.keys(intfRows).sort().map((k, i) => {
-                          let status = intfRows[k];
-                          let color = "error"
-                          if (status == "UP") {
-                            color = "success"
-                          }
-                          return (
-                              <Grid item>
-                                <Chip label={k} color={color} variant="contained" />
-                              </Grid>
-                          )
-                      })
-                      } */}
-                    {/* <TableContainer component={Paper}>
-                      <Table  aria-label="simple table">
-                        <TableHead>
-                          <TableRow>
-                            <TableCell>
-                              <Chip label="Interface" color="primary" variant="outlined" />
-                            </TableCell>
-                            <TableCell align="right">
-                              <Chip label="Status" color="primary" variant="outlined" />
-                            </TableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody> */}
-                          <Grid container spacing={2}>
-                        {Object.keys(intfRows).sort(sortIntf).map((k, i) => {
-                          let status = intfRows[k];
-                          return(
-                            <Grid item xs={2}>
-                              <Item>
-                              {status == "UP" ? (<Chip label={k} color="success" />) : (<Chip label={k} color="error" />)}
-                              </Item>
-                            </Grid>
-                          )
-                          // return (
-                          //   <TableRow key={k} sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
-                          //     <TableCell component="th" scope="row">
-                          //       <Typography variant="h6" component="div" sx={{ flexGrow: 2 }}>
-                          //         {k}
-                          //       </Typography>
-                          //     </TableCell>
-                          //     <TableCell align="right">
-                          //     {status == "UP" ? (<Chip label="UP" color="success" />) : (<Chip label="DOWN" color="error" />)}
-                          //     </TableCell>
-                          //   </TableRow>
-                          // )
-                        })}
+                  <Container>
+                    <Card sx={{ paddingTop: 2  }}>
+                      <CardActions>
+                        <Typography sx={{ flexGrow: 1}} color="text.secondary" gutterBottom>
+                          Interface Status
+                        </Typography>
+                        <Button color="error" size="small" disabled={intfStatusRpcStatus === 1} onClick={start_interface_rpc} startIcon={<PlayArrowIcon/>}>start</Button>
+                        <Button color="error" size="small" disabled={intfStatusRpcStatus === 0} onClick={stop_interface_status_rpc} startIcon={<StopIcon/>}>stop</Button>
+                      </CardActions>
+                      <Grid container>
+                        <Grid item xs={4}>
+                          <CardContent>
+                            <Item><IntfOnChange name="Ethernet Interface" rows={intfEthernetRows}/></Item>
+                          </CardContent>
                         </Grid>
-                        {/* </TableBody>
-                      </Table>
-                    </TableContainer> */}
-                    </CardContent>
-                  </Card>
+                        <Grid item xs={4}>
+                          <CardContent>
+                            <Item><IntfOnChange name="Vlan Interface" rows={intfVlanRows}/></Item>
+                          </CardContent>
+                        </Grid>
+                        <Grid item xs={4}>
+                          <CardContent>
+                            <Item><IntfOnChange name="eth Interface" rows={intfEthRows}/></Item>
+                          </CardContent>
+                        </Grid>
+                        <Grid item xs={4}>
+                          <CardContent>
+                            <Item><IntfOnChange name="PortChannel Interface" rows={intfPortChannelRows}/></Item>
+                          </CardContent>
+                        </Grid>
+                      </Grid>
+                    </Card>
+                  </Container>
                 </Box>
 
             ) : (

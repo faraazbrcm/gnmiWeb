@@ -6,10 +6,8 @@ from gnmi import GNMIConnection, gNMIError, extract_gnmi_val
 import grpc
 import pdb
 import json
+from log import log
 
-static_files = {
-    '/': {'filename': 'index.html', 'content_type': 'text/html'},
-}
 sessions = {}
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
@@ -27,7 +25,7 @@ def gnmi_disconnect(sid, remove_sid=False):
 @sio.event
 def connect(auth):
     sid = request.sid
-    print(f"========= Connect Received- {sid} =========")
+    log(f"========= Connect Received- {sid} =========")
     if sid not in sessions:
         sessions[sid] = {"gnmi_con": None, "rpc": {}}
     sio.emit("sid", sid, room=sid)
@@ -35,12 +33,12 @@ def connect(auth):
 @sio.event
 def disconnect():
     sid = request.sid
-    print(f"========= Disconnect Received- {sid} =========")
+    log(f"========= Disconnect Received- {sid} =========")
     gnmi_disconnect(sid, remove_sid=True)
 
 @app.route("/connect/<string:sid>/<string:switch_ip>/<string:username>/<string:password>", methods=["post"])
 def switch_connect(sid, switch_ip, username, password):
-    print(f"GNMI connect Request, sid = {sid} switch-IP={switch_ip}")
+    log(f"GNMI connect Request, sid = {sid} switch-IP={switch_ip}")
     if sid not in sessions:
         abort(402)    
     con = GNMIConnection(dut=switch_ip, username=username, password=password)
@@ -53,28 +51,12 @@ def switch_connect(sid, switch_ip, username, password):
 
 @app.route("/disconnect/<string:sid>/<string:switch_ip>", methods=["post"])
 def switch_disconnect(sid, switch_ip):
-    print(f"GNMI Disconnect Request sid = {sid} switch-IP={switch_ip}")
+    log(f"GNMI Disconnect Request sid = {sid} switch-IP={switch_ip}")
     if sid not in sessions:
         abort(402)
     gnmi_disconnect(sid)
     data = {'message': 'gNMI Disconnection successful', 'code': 'SUCCESS'}
     return make_response(jsonify(data), 201)
-
-
-@app.route("/faraaz", methods=["get"])
-def faraaz():
-    import time
-    count = 3
-    @stream_with_context
-    def generate(count):
-        while count != 0:
-            count = count - 1
-            time.sleep(3)
-            b = {"count": count}
-            #yield "<p>faraaz</p>"
-            yield json.dumps(b) + '\n'
-    return app.response_class(generate(count), mimetype='text/json')
-    #return Response(generate(count))
 
 @app.route("/<string:sid>/get_vlans", methods=["get"])
 def get_vlans(sid):
@@ -86,7 +68,7 @@ def get_vlans(sid):
     if status == 0:
         if "sonic-vlan:sonic-vlan" in payloadStr:
             payload = payloadStr["sonic-vlan:sonic-vlan"]["VLAN"]["VLAN_LIST"]
-            print(json.dumps(payload, indent=2))
+            log(json.dumps(payload, indent=2))
             status = 200
             data = {'data': payload, 'code': 'SUCCESS'}
         else:
@@ -178,23 +160,6 @@ def vlan_mtu(sid, vlan, mtu):
     update = [(path, payload)]
     return do_update(sid, update)
 
-# @app.route("/<string:sid>/get_vlans", methods=["get"])
-# def get_vlans(sid):
-#     path = '/sonic-vlan:sonic-vlan'
-#     resp, status = sessions[sid]["gnmi_con"].gnmi_get(path)
-#     for key in resp:
-#         payloadStr = resp[key].val.json_ietf_val.decode()
-#         payloadStr = json.loads(payloadStr)
-#     if status == 0:
-#         payload = payloadStr["sonic-vlan:sonic-vlan"]["VLAN"]["VLAN_LIST"]
-#         print(json.dumps(payload, indent=2))
-#         status = 200
-#         data = {'data': payload, 'code': 'SUCCESS'}
-#     else:
-#         status = 404
-#         data = {'data': "Error in getting vlans", 'code': 'FAILURE'}
-#     return make_response(jsonify(data), status)
-
 @app.route("/interface_onchange/<string:sid>/<string:action>", methods=["get"])
 def interface_onchange(sid, action):
     if action == "start":
@@ -209,16 +174,16 @@ def interface_onchange(sid, action):
                 try:
                     for resp in rpc:
                         status = {}
-                        print(str(resp))
+                        log(str(resp))
                         if resp.sync_response:
                             continue
                         for update in resp.update.update:
                             status[resp.update.prefix.elem[1].key['name']] = extract_gnmi_val(update.val)
-                            #print(resp.update.prefix.elem[1].key['name'])
+                            #log(resp.update.prefix.elem[1].key['name'])
                             sio.emit('interface_on_change', status, room=sid)
                 except grpc.RpcError as exp:
                     if exp.code() == grpc.StatusCode.CANCELLED:
-                        print("********** cancelled ********")
+                        log("********** cancelled ********")
                     else:
                         data = {'message': 'gNMI RPC Failed', 'code': 'SUCCESS'}
                         return make_response(jsonify(data), 500)
@@ -256,7 +221,7 @@ def interface_sample(sid, eth, interval, action):
                 try:
                     for resp in rpc:
                         status = {}
-                        #print(str(resp))
+                        #log(str(resp))
                         if resp.sync_response:
                             continue
                         stats = {}
@@ -264,12 +229,12 @@ def interface_sample(sid, eth, interval, action):
                             count = count + 1000
                             stats_name = update.path.elem[0].name
                             stats_val = extract_gnmi_val(update.val)
-                            print(stats_name, stats_val)
+                            log(f"{stats_name} => {stats_val}")
                             stats[stats_name] = stats_val
                         sio.emit('interface_sample', stats, room=sid)
                 except grpc.RpcError as exp:
                     if exp.code() == grpc.StatusCode.CANCELLED:
-                        print("********** cancelled ********")
+                        log("********** cancelled ********")
                     else:
                         data = {'message': 'gNMI RPC Failed', 'code': 'SUCCESS'}
                         return make_response(jsonify(data), 500)
